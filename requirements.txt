@@ -1,6 +1,6 @@
 flask
-flask-wtf
 psycopg2
 python-dotenv
+flask-jwt-extended
 werkzeug
-flask-login
+pydantic
