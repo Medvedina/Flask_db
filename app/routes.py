@@ -1,56 +1,45 @@
-from flask import render_template, flash, redirect, url_for
-from app import app
-from app.forms import *
-from app.repository import PostgresQLRepository
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
+from app.repository import get_repository
+
+    
+auth_bp = Blueprint('auth_bp', __name__)
+repo = get_repository()
 
 
-@app.route('/')
-@app.route('/index')
-def index():
-    user = {'username': 'User'}
-    posts = [
-        {
-            'author': {'username': 'John'},
-            'body': 'Beautiful day in Portland!'
-        },
-        {
-            'author': {'username': 'Susan'},
-            'body': 'The Avengers movie was so cool!'
-        },
-        {
-            'author': {'username': 'Ипполит'},
-            'body': 'Какая гадость эта ваша заливная рыба!!'
-        }
-    ]
-    return render_template('index.html', title='Home', user=user, posts=posts)
-
-
-@app.route('/login', methods=['GET', 'POST'])
+@auth_bp.route('/login', methods=['POST'])
 def login():
-    form = LoginForm()
-    account = None
-    repository = PostgresQLRepository()
-    if form.validate_on_submit():
-        account = repository.get_user(form.username.data, form.password.data)
-        if account:
-            flash('Вошёл {}, remember_me={}'.format(
-                form.username.data, form.remember_me.data))
-            return redirect(url_for('index'))
-        else:
-            flash('Неправильные логин или пароль')
-            return redirect(url_for('index'))
-    return render_template('login.html', title='Sign In', form=form)
+    data = request.json
+    login = data.get('login')
+    password = data.get('password')
+
+    user = repo.get_user(login, password)
+
+    if user:
+        access_token = create_access_token(identity=str(user[0]), additional_claims={'login': user[1]})
+        return jsonify(access_token=access_token), 200
+    else:
+        return jsonify(message="Неверные учетные данные"), 401
 
 
-@app.route('/register', methods=['GET', 'POST'])
+@auth_bp.route('/register', methods=['POST'])
 def register():
-    form = RegisterForm()
-    repository = PostgresQLRepository()
-    if form.validate_on_submit():
-        if repository.register_user(form.username.data, form.password.data, form.first_name.data, form.last_name.data, form.birth_date.data):
-            flash('Пользователь {} зарегистрирован'.format(form.username.data))
-            return redirect(url_for('login'))
-        else:
-            flash('Что-то пошло не так')
-            return redirect(url_for('register'))
-    return render_template('register.html', title='Register', form=form)
+    data = request.json
+    login = data.get('login')
+    password = data.get('password')
+    full_name = data.get('full_name')
+    birth_date = data.get('birth_date') if data.get('birth_date') != '' else None
+
+    if repo.register_user(login, password, full_name, birth_date):
+        return jsonify(message="Пользователь успешно зарегистрирован."), 201
+    else:
+        return jsonify(message="Ошибка при регистрации пользователя."), 400
+
+
+@auth_bp.route('/protected', methods=['GET'])
+@jwt_required()
+def protected():
+    current_user_id = get_jwt_identity()
+    current_user_login = get_jwt()['login']
+
+    return jsonify(logged_in_as=current_user_login, user_id=current_user_id), 200
