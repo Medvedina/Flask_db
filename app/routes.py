@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 from app.repository import get_repository
-
+from app.models.account import Account
     
 auth_bp = Blueprint('auth_bp', __name__)
 repo = get_repository()
@@ -25,15 +25,14 @@ def login():
 @auth_bp.route('/register', methods=['POST'])
 def register():
     data = request.json
-    login = data.get('login')
-    password = data.get('password')
-    full_name = data.get('full_name')
-    birth_date = data.get('birth_date') if data.get('birth_date') != '' else None
+    account = Account(**data)
+    new_account = Account(login=account.login, password=account.password, 
+                          full_name=account.full_name, birth_date=account.birth_date)
 
-    if repo.register_user(login, password, full_name, birth_date):
+    if repo.register_user(new_account):
         return jsonify(message="Пользователь успешно зарегистрирован."), 201
     else:
-        return jsonify(message="Ошибка при регистрации пользователя."), 400
+        return jsonify(message="Имя пользователя уже используется"), 400
 
 
 @auth_bp.route('/protected', methods=['GET'])
@@ -42,4 +41,4 @@ def protected():
     current_user_id = get_jwt_identity()
     current_user_login = get_jwt()['login']
 
-    return jsonify(logged_in_as=current_user_login, user_id=current_user_id), 200
+    return jsonify(message='Успешная авторизация', logged_in_as=current_user_login, id=current_user_id), 200

@@ -41,7 +41,7 @@ class Repository:
             print(f'Произошла ошибка: {e}')
             return None
 
-    def register_user(self, login, password, full_name, birth_date='NULL', role='User'):
+    def register_user(self, account):
         if not self.connection or not self.cursor:
             print("Соединение с базой данных не установлено.")
             return False
@@ -49,7 +49,8 @@ class Repository:
         try:
             self.cursor.execute('''INSERT INTO accounts (login, password, full_name, birth_date, role)
                                    VALUES (%s, %s, %s, %s, %s)''', 
-                                   (login, generate_password_hash(password), full_name, birth_date, role))
+                                   (account.login, generate_password_hash(account.password), 
+                                    account.full_name, account.birth_date, account.role))
             self.connection.commit()
             return True
         except Exception as e:
