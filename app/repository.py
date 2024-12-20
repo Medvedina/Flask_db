@@ -5,8 +5,6 @@ from psycopg2 import Error
 
 class Repository:
     def __init__(self):
-        self.connection = None
-        self.cursor = None
         try:
             self.connection = psycopg2.connect(f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}")
             self.cursor = self.connection.cursor()
