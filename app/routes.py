@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 from app.repository import get_repository
-from app.models.account import Account
+from app.models.account import RegistrateDTO
     
 auth_bp = Blueprint('auth_bp', __name__)
 repo = get_repository()
@@ -25,9 +25,10 @@ def login():
 @auth_bp.route('/register', methods=['POST'])
 def register():
     data = request.json
-    account = Account(**data)
-    new_account = Account(login=account.login, password=account.password, 
-                          full_name=account.full_name, birth_date=account.birth_date)
+    account = RegistrateDTO(**data)
+    new_account = RegistrateDTO(login=account.login, password=account.password, 
+                                password_confirm=account.password_confirm,
+                                full_name=account.full_name, birth_date=account.birth_date)
 
     if repo.register_user(new_account):
         return jsonify(message="Пользователь успешно зарегистрирован."), 201
