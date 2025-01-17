@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+load_dotenv()
 
 import os
 
@@ -8,12 +9,6 @@ from app.routes import auth_bp
 from app import app
 
 app.register_blueprint(auth_bp)
-load_dotenv()
-
-
-@app.route('/')
-def home():
-    return "Salam"
 
 if __name__ == '__main__':
     app.run(debug=True)

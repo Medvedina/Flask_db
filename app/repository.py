@@ -1,12 +1,27 @@
+from app.service.service import check_password
 import os
 import psycopg2
-from werkzeug.security import generate_password_hash, check_password_hash
-from psycopg2 import Error
+import sys
+from werkzeug.security import generate_password_hash
+from psycopg2 import Error, pool
 
 class Repository:
     def __init__(self):
+        db_config = {
+            'dbname': os.getenv('DB_NAME'),
+            'user': os.getenv('DB_USER'),
+            'password': os.getenv('DB_PASSWORD'),
+            'host': os.getenv('DB_HOST'),
+            'port': os.getenv('DB_PORT')
+        }
+
         try:
-            self.connection = psycopg2.connect(f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}")
+            connection_pool = psycopg2.pool.SimpleConnectionPool(1, 20, **db_config)
+        except Exception as error:
+            raise error
+        
+        try:
+            self.connection = connection_pool.getconn()
             self.cursor = self.connection.cursor()
             self.cursor.execute('''CREATE TABLE IF NOT EXISTS accounts (
                                     id SERIAL PRIMARY KEY,
@@ -19,30 +34,25 @@ class Repository:
             self.connection.commit()
         except(Exception, Error) as error:
             print("Ошибка при работе с PostgreSQL", error)
+            raise error
 
     def get_user(self, login, password):
         if not self.connection or not self.cursor:
             print("Соединение с базой данных не установлено.")
-            return None
+            sys.exit(Error)  
         
         try:
             self.cursor.execute('SELECT id, login, password FROM accounts WHERE login = %s;', (login, ))
             account = self.cursor.fetchone()
-
-            if account and check_password_hash(account[2], password): 
-                return account  
-            else:
-                print("Неверный логин или пароль.")
-                return None
-
-        except Exception as e:
-            print(f'Произошла ошибка: {e}')
-            return None
+            return check_password(account, password)
+        except Exception as error:
+            raise error
+        
 
     def register_user(self, account):
         if not self.connection or not self.cursor:
             print("Соединение с базой данных не установлено.")
-            return False
+            sys.exit(Error)
 
         try:
             self.cursor.execute('''INSERT INTO accounts (login, password, full_name, birth_date, role)
@@ -51,8 +61,8 @@ class Repository:
                                     account.full_name, account.birth_date, account.role))
             self.connection.commit()
             return True
-        except Exception as e:
-            print(f'Произошла ошибка: {e}')
+        except Exception as error:
+            print(f'Произошла ошибка: {error}')
             self.connection.rollback()
             return False
 

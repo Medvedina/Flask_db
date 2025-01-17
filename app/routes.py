@@ -19,19 +19,16 @@ def login():
         access_token = create_access_token(identity=str(user[0]), additional_claims={'login': user[1]})
         return jsonify(access_token=access_token), 200
     else:
-        return jsonify(message="Неверные учетные данные"), 401
+        return '', 401
 
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
     data = request.json
     account = RegistrateDTO(**data)
-    new_account = RegistrateDTO(login=account.login, password=account.password, 
-                                password_confirm=account.password_confirm,
-                                full_name=account.full_name, birth_date=account.birth_date)
 
-    if repo.register_user(new_account):
-        return jsonify(message="Пользователь успешно зарегистрирован."), 201
+    if repo.register_user(account):
+        return jsonify(message=f"Пользователь {account.login} успешно зарегистрирован."), 201
     else:
         return jsonify(message="Имя пользователя уже используется"), 400
 
@@ -42,4 +39,4 @@ def protected():
     current_user_id = get_jwt_identity()
     current_user_login = get_jwt()['login']
 
-    return jsonify(message='Успешная авторизация', logged_in_as=current_user_login, id=current_user_id), 200
+    return '', 201
